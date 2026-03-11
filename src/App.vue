@@ -14,7 +14,7 @@ const inputText = ref('')
 const showMirror = ref(true)
 
 // Theme
-const theme = ref<Theme>((localStorage.getItem('theme') as Theme) || 'dark')
+const theme = ref<Theme>((localStorage.getItem('theme') as Theme) || 'light')
 
 function applyTheme(t: Theme) {
   document.documentElement.setAttribute('data-theme', t)
@@ -208,6 +208,34 @@ const mirrorUnicode = computed(() => {
   }).join('\n')
 })
 
+function mirrorBrailleChar(char: string): string {
+  const code = char.charCodeAt(0)
+  if (code >= 0x2800 && code <= 0x28FF) {
+    let v = code - 0x2800
+    let newV = 0
+    if (v & 0x01) newV |= 0x08
+    if (v & 0x02) newV |= 0x10
+    if (v & 0x04) newV |= 0x20
+    if (v & 0x08) newV |= 0x01
+    if (v & 0x10) newV |= 0x02
+    if (v & 0x20) newV |= 0x04
+    if (v & 0x40) newV |= 0x80
+    if (v & 0x80) newV |= 0x40
+    return String.fromCharCode(0x2800 + newV)
+  }
+  return char
+}
+
+const mirrorMapping = computed<BrailleCharGroup[]>(() => {
+  const mapping = brailleMapping.value
+  if (!mapping.length) return []
+
+  return [...mapping].reverse().map(group => ({
+    cells: group.cells.map(cell => mirrorBrailleChar(cell)),
+    label: group.label
+  }))
+})
+
 // Auto-detect language
 watch(inputText, (newVal) => {
   if (!newVal) return
@@ -331,7 +359,14 @@ function copyToClipboard(text: string) {
                 📋 Copy Mirror
               </button>
             </div>
-            <div class="braille-unicode" id="braille-mirror" style="color: var(--accent-amber);">{{ mirrorUnicode }}</div>
+            <div class="braille-char-grid" id="braille-mirror">
+              <div v-for="(group, idx) in mirrorMapping" :key="idx" class="braille-char-group">
+                <div class="braille-char-cells">
+                  <span v-for="(cell, ci) in group.cells" :key="ci" class="braille-char mirror">{{ cell }}</span>
+                </div>
+                <span class="braille-char-label">{{ group.label }}</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -418,6 +453,22 @@ function copyToClipboard(text: string) {
   color: var(--accent-cyan);
   min-width: 28px;
   text-align: center;
+  position: relative;
+  display: inline-block;
+}
+
+.braille-char::before {
+  content: '⠿';
+  position: absolute;
+  inset: 0;
+  color: var(--text-muted);
+  opacity: 0.3;
+  pointer-events: none;
+  text-align: center;
+}
+
+.braille-char.mirror {
+  color: var(--accent-amber);
 }
 
 .braille-char-label {

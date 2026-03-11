@@ -269,7 +269,9 @@ const currentEntries = computed(() => {
         :key="entry.char"
         class="ref-card"
       >
-        <div class="ref-card-braille">{{ entry.unicode }}</div>
+        <div class="ref-card-braille">
+          <span v-for="(ch, i) in [...entry.unicode]" :key="i" class="braille-dot-cell">{{ ch }}</span>
+        </div>
         <div class="ref-card-char">{{ entry.char }}</div>
         <div class="ref-card-label">{{ entry.label }}</div>
         <div class="ref-card-dots">dots {{ entry.dots }}</div>
@@ -422,5 +424,20 @@ const currentEntries = computed(() => {
   font-size: 0.7rem;
   color: var(--accent-purple);
   opacity: 0.8;
+}
+
+.braille-dot-cell {
+  position: relative;
+  display: inline-block;
+}
+
+.braille-dot-cell::before {
+  content: '⠿';
+  position: absolute;
+  inset: 0;
+  color: var(--text-muted);
+  opacity: 0.3;
+  pointer-events: none;
+  text-align: center;
 }
 </style>
