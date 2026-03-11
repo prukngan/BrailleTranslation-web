@@ -20,17 +20,31 @@ function dotsToUnicode(dotString: string): string {
   return String.fromCharCode(code)
 }
 
-type TabKey = 'en-letters' | 'en-numbers' | 'th-consonants' | 'th-vowels' | 'th-tones' | 'punctuation'
+// ===== Two-level tab system =====
+type LangTab = 'th' | 'en'
+type ThSubTab = 'th-consonants' | 'th-vowels' | 'th-tones' | 'th-punctuation'
+type EnSubTab = 'en-letters' | 'en-numbers' | 'en-punctuation'
 
-const activeTab = ref<TabKey>('en-letters')
+const activeLang = ref<LangTab>('th')
+const activeThSub = ref<ThSubTab>('th-consonants')
+const activeEnSub = ref<EnSubTab>('en-letters')
 
-const tabs: { key: TabKey; label: string; emoji: string }[] = [
-  { key: 'en-letters', label: 'A-Z', emoji: '🔤' },
-  { key: 'en-numbers', label: 'เลข EN', emoji: '🔢' },
-  { key: 'th-consonants', label: 'พยัญชนะ', emoji: '🇹🇭' },
+const langTabs: { key: LangTab; label: string; emoji: string }[] = [
+  { key: 'th', label: 'ภาษาไทย', emoji: '🇹🇭' },
+  { key: 'en', label: 'English', emoji: '🇬🇧' },
+]
+
+const thSubTabs: { key: ThSubTab; label: string; emoji: string }[] = [
+  { key: 'th-consonants', label: 'พยัญชนะ', emoji: '🔤' },
   { key: 'th-vowels', label: 'สระ', emoji: '◌ิ' },
   { key: 'th-tones', label: 'วรรณยุกต์', emoji: '◌่' },
-  { key: 'punctuation', label: 'เครื่องหมาย', emoji: '.,!' },
+  { key: 'th-punctuation', label: 'เครื่องหมาย', emoji: '.,!' },
+]
+
+const enSubTabs: { key: EnSubTab; label: string; emoji: string }[] = [
+  { key: 'en-letters', label: 'A-Z', emoji: '🔤' },
+  { key: 'en-numbers', label: 'Numbers', emoji: '🔢' },
+  { key: 'en-punctuation', label: 'Punctuation', emoji: '.,!' },
 ]
 
 const enLetters: BrailleEntry[] = [
@@ -159,14 +173,21 @@ const punctuation: BrailleEntry[] = [
 ]
 
 const currentEntries = computed(() => {
-  switch (activeTab.value) {
-    case 'en-letters': return enLetters
-    case 'en-numbers': return enNumbers
-    case 'th-consonants': return thConsonants
-    case 'th-vowels': return thVowels
-    case 'th-tones': return thTones
-    case 'punctuation': return punctuation
-    default: return enLetters
+  if (activeLang.value === 'th') {
+    switch (activeThSub.value) {
+      case 'th-consonants': return thConsonants
+      case 'th-vowels': return thVowels
+      case 'th-tones': return thTones
+      case 'th-punctuation': return punctuation
+      default: return thConsonants
+    }
+  } else {
+    switch (activeEnSub.value) {
+      case 'en-letters': return enLetters
+      case 'en-numbers': return enNumbers
+      case 'en-punctuation': return punctuation
+      default: return enLetters
+    }
   }
 })
 </script>
@@ -179,43 +200,210 @@ const currentEntries = computed(() => {
       <p>ตารางแสดงอักษรเบรลล์ทั้งภาษาไทยและอังกฤษ พร้อม Dot Pattern และ Unicode</p>
     </div>
 
-    <!-- Category Tabs -->
-    <div class="flex flex-wrap gap-1.5 p-1.5 bg-[var(--bg-input)] rounded-[var(--radius-md)] mb-8 border border-[var(--border-subtle)]">
+    <!-- Language Tabs (Top Level) -->
+    <div class="ref-lang-tabs">
       <button
-        v-for="tab in tabs"
+        v-for="tab in langTabs"
+        :key="tab.key"
+        :id="`ref-lang-${tab.key}`"
+        @click="activeLang = tab.key"
+        class="ref-lang-tab"
+        :class="{ active: activeLang === tab.key }"
+      >
+        <span class="ref-tab-emoji">{{ tab.emoji }}</span>
+        {{ tab.label }}
+      </button>
+    </div>
+
+    <!-- Sub-category Tabs (Thai) -->
+    <div v-if="activeLang === 'th'" class="ref-sub-tabs">
+      <button
+        v-for="tab in thSubTabs"
         :key="tab.key"
         :id="`ref-tab-${tab.key}`"
-        @click="activeTab = tab.key"
-        class="px-4 py-2 rounded-[var(--radius-sm)] font-['Inter'] text-[0.82rem] font-medium cursor-pointer border-none flex items-center gap-1.5 whitespace-nowrap transition-all duration-150 ease-[cubic-bezier(0.4,0,0.2,1)]"
-        :class="activeTab === tab.key
-          ? 'bg-[var(--gradient-primary)] text-white shadow-[0_2px_8px_rgba(99,132,255,0.25)]'
-          : 'bg-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-white/[0.03]'"
+        @click="activeThSub = tab.key"
+        class="ref-sub-tab"
+        :class="{ active: activeThSub === tab.key }"
       >
-        <span class="text-[0.9rem]">{{ tab.emoji }}</span>
+        <span class="ref-tab-emoji">{{ tab.emoji }}</span>
+        {{ tab.label }}
+      </button>
+    </div>
+
+    <!-- Sub-category Tabs (English) -->
+    <div v-if="activeLang === 'en'" class="ref-sub-tabs">
+      <button
+        v-for="tab in enSubTabs"
+        :key="tab.key"
+        :id="`ref-tab-${tab.key}`"
+        @click="activeEnSub = tab.key"
+        class="ref-sub-tab"
+        :class="{ active: activeEnSub === tab.key }"
+      >
+        <span class="ref-tab-emoji">{{ tab.emoji }}</span>
         {{ tab.label }}
       </button>
     </div>
 
     <!-- Reference Grid -->
-    <div class="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-3 max-md:grid-cols-[repeat(auto-fill,minmax(100px,1fr))]">
+    <div class="ref-grid">
       <div
         v-for="entry in currentEntries"
         :key="entry.char"
-        class="bg-[var(--gradient-card)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] px-4 py-5 text-center transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] cursor-default hover:border-[var(--border-accent)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-glow)]"
+        class="ref-card"
       >
-        <div class="text-[2.2rem] text-[var(--accent-cyan)] mb-2 tracking-[0.1em] min-h-[2.8rem] flex items-center justify-center">
-          {{ entry.unicode }}
-        </div>
-        <div class="text-[1.3rem] font-bold text-[var(--text-primary)] mb-[0.2rem]">
-          {{ entry.char }}
-        </div>
-        <div class="text-[0.75rem] text-[var(--text-secondary)] mb-[0.3rem]">
-          {{ entry.label }}
-        </div>
-        <div class="font-['JetBrains_Mono',monospace] text-[0.7rem] text-[var(--accent-purple)] opacity-80">
-          dots {{ entry.dots }}
-        </div>
+        <div class="ref-card-braille">{{ entry.unicode }}</div>
+        <div class="ref-card-char">{{ entry.char }}</div>
+        <div class="ref-card-label">{{ entry.label }}</div>
+        <div class="ref-card-dots">dots {{ entry.dots }}</div>
       </div>
     </div>
   </main>
 </template>
+
+<style scoped>
+/* ===== Language tabs (top level) ===== */
+.ref-lang-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 5px;
+  background: var(--bg-input);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  width: fit-content;
+  margin-bottom: 0.75rem;
+}
+
+.ref-lang-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border-radius: var(--radius-sm);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.ref-lang-tab:hover {
+  color: var(--text-secondary);
+  background: var(--btn-ghost-bg);
+}
+
+.ref-lang-tab.active {
+  background: var(--gradient-primary);
+  color: white;
+  box-shadow: 0 2px 12px rgba(99, 132, 255, 0.3);
+}
+
+/* ===== Sub-category tabs ===== */
+.ref-sub-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 5px;
+  background: var(--bg-input);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  margin-bottom: 2rem;
+}
+
+.ref-sub-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: var(--radius-sm);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.84rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.ref-sub-tab:hover {
+  color: var(--text-secondary);
+  background: var(--btn-ghost-bg);
+}
+
+.ref-sub-tab.active {
+  background: var(--gradient-primary);
+  color: white;
+  box-shadow: 0 2px 8px rgba(99, 132, 255, 0.25);
+}
+
+.ref-tab-emoji {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+/* ===== Reference grid ===== */
+.ref-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .ref-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  }
+}
+
+.ref-card {
+  background: var(--gradient-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1.2rem 1rem;
+  text-align: center;
+  transition: all var(--transition-smooth);
+  cursor: default;
+}
+
+.ref-card:hover {
+  border-color: var(--border-accent);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+}
+
+.ref-card-braille {
+  font-size: 2.2rem;
+  color: var(--accent-cyan);
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.1em;
+  min-height: 2.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ref-card-char {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.15rem;
+}
+
+.ref-card-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.3rem;
+}
+
+.ref-card-dots {
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 0.7rem;
+  color: var(--accent-purple);
+  opacity: 0.8;
+}
+</style>

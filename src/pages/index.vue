@@ -8,7 +8,7 @@ import { RouterLink } from 'vue-router'
       <div class="feature-card" id="feature-translate">
         <span class="feature-emoji">🔤</span>
         <h3 class="feature-name">ระบบแปลภาษาสำเร็จรูป</h3>
-        <p class="feature-desc">ตอนนี้ระบบแปลภาษาถูกย้ายไปไว้ที่หน้าหลักส่วนบน เพื่อให้สามารถใช้งานพร้อมกับตารางอ้างอิงได้แล้ว</p>
+        <p class="feature-desc">แปลงข้อความภาษาไทยและภาษาอังกฤษเป็นอักษรเบรลล์ได้อย่างถูกต้องและรวดเร็ว เพียงแค่พิมพ์ข้อความที่ต้องการ</p>
       </div>
 
       <RouterLink to="/reference" class="feature-card" id="feature-reference">
