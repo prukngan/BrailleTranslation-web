@@ -39,8 +39,23 @@ interface BrailleCharMapping {
   label: string
 }
 
+/** Display names for compound vowels – show a dash where the consonant goes */
+const COMPOUND_VOWEL_DISPLAY: Record<string, string> = {
+  'เอ': 'เ-อ',
+  'เีย': 'เ-ีย',
+  'เือ': 'เ-ือ',
+  'ัว': '-ัว',
+  'เา': 'เ-า',
+  'เาะ': 'เ-าะ',
+}
+
 /** Check if a Thai character is a combining mark that needs a dotted circle */
 function formatThaiLabel(ch: string): string {
+  // Compound vowels: show with dash
+  if (COMPOUND_VOWEL_DISPLAY[ch]) {
+    return COMPOUND_VOWEL_DISPLAY[ch]
+  }
+
   const code = ch.charCodeAt(0)
   // Thai combining characters: sara am above/below vowels, tone marks, special marks
   // U+0E31 (ั), U+0E34-U+0E3A (ิ ี ึ ื ุ ู ฺ), U+0E47-U+0E4E (็ ่ ้ ๊ ๋ ์ ํ ๎)
