@@ -30,86 +30,6 @@ function classify(c: string): string {
     return 'OTHER'
 }
 
-// function parseThai(textTemp: string): {
-//     character: string[]
-//     spelling: string[]
-//     tone: string[]
-//     lastC: string[]
-// } {
-//     let text = textTemp
-//     const character: string[] = []
-//     let spelling: string[] = []
-//     const tone: string[] = []
-//     let lastC: string[] = []
-
-//     if (classify(text[0]) === 'Vpre') {
-//         // สระนำหน้าพยัญชนะ
-//         for (let i = 1; i < text.length; i++) {
-//             if (classify(text[1]) !== 'C') break
-//             character.push(text[1])
-//             text = text.slice(0, 1) + text.slice(2)
-//         }
-
-//         for (const c of text) {
-//             if (classify(c) === 'Tone') {
-//                 tone.push(c)
-//                 text = text.replace(c, '')
-//                 break
-//             }
-//         }
-
-//         if (classify(text) === 'Spelling') {
-//             spelling = [text]
-//         } else {
-//             if (classify(text[text.length - 1]) === 'C') {
-//                 lastC = [text[text.length - 1]]
-//                 text = text.slice(0, -1)
-//                 if (text === 'เิ') {
-//                     spelling = text ? [text] : []
-//                 } else if (classify(text) === 'Spelling') {
-//                     spelling = text ? [text] : []
-//                 } else {
-//                     for (const c of text) {
-//                         tone.push(c)
-//                     }
-//                 }
-//             } else if (text === 'เาะ') {
-//                 spelling.push(text)
-//             } else if (text[text.length - 1] === 'ะ') {
-//                 spelling.push(text.slice(0, -1))
-//                 spelling.push('ะ')
-//             } else {
-//                 for (const c of text) {
-//                     spelling.push(c)
-//                 }
-//             }
-//         }
-//     } else {
-//         for (const c of text) {
-//             if (classify(c) !== 'C') break
-//             character.push(c)
-//             text = text.slice(1)
-//         }
-
-//         let spellingTmp = ''
-//         for (const c of text) {
-//             spellingTmp += c
-//             if (classify(spellingTmp) === 'Spelling') {
-//                 spelling = [spellingTmp]
-//                 text = text.slice(spellingTmp.length)
-//                 if (text === 'ะ') {
-//                     spelling.push(text)
-//                 } else {
-//                     lastC = text ? [text] : []
-//                 }
-//                 break
-//             }
-//         }
-//     }
-
-//     return { character, spelling, tone, lastC }
-// }
-
 function parseThai(textTemp: string): {
     character: string[]
     spelling: string[]
@@ -122,14 +42,78 @@ function parseThai(textTemp: string): {
     const tone: string[] = []
     let lastC: string[] = []
 
-    if (text[0] === 'เ' || text[0] === 'แ') {
+    if (!text.length) return { character, spelling, tone, lastC }
 
+    if (classify(text[0]!) === 'Vpre') {
+        // สระนำหน้าพยัญชนะ
+        for (let i = 1; i < text.length; i++) {
+            if (classify(text[1]!) !== 'C') break
+            character.push(text[1]!)
+            text = text.slice(0, 1) + text.slice(2)
+        }
+
+        for (const c of text) {
+            if (classify(c) === 'Tone') {
+                tone.push(c)
+                text = text.replace(c, '')
+                break
+            }
+        }
+
+        if (classify(text) === 'Spelling') {
+            spelling = [text]
+        } else {
+            if (classify(text[text.length - 1]!) === 'C') {
+                lastC = [text[text.length - 1]!]
+                text = text.slice(0, -1)
+                if (text === 'เิ') {
+                    spelling = text ? [text] : []
+                } else if (classify(text) === 'Spelling') {
+                    spelling = text ? [text] : []
+                } else {
+                    for (const c of text) {
+                        tone.push(c)
+                    }
+                }
+            } else if (text === 'เาะ') {
+                spelling.push(text)
+            } else if (text[text.length - 1] === 'ะ') {
+                spelling.push(text.slice(0, -1))
+                spelling.push('ะ')
+            } else {
+                for (const c of text) {
+                    spelling.push(c)
+                }
+            }
+        }
+    } else {
+        for (const c of text) {
+            if (classify(c) !== 'C') break
+            character.push(c)
+            text = text.slice(1)
+        }
+
+        let spellingTmp = ''
+        for (const c of text) {
+            spellingTmp += c
+            if (classify(spellingTmp) === 'Spelling') {
+                spelling = [spellingTmp]
+                text = text.slice(spellingTmp.length)
+                if (text === 'ะ') {
+                    spelling.push(text)
+                } else {
+                    lastC = text ? [text] : []
+                }
+                break
+            }
+        }
     }
 
     return { character, spelling, tone, lastC }
 }
 
-function brailleTranslate(text: string): string[] {
+
+export function brailleTranslate(text: string): string[] {
     const { character, spelling, tone, lastC } = parseThai(text)
 
     if (!spelling.length) return [...text]
@@ -153,7 +137,7 @@ function brailleTranslate(text: string): string[] {
  * This is a simplified version - not as accurate as pythainlp
  * but works for basic Thai text without a backend.
  */
-function simpleThaiTokenize(text: string): string[] {
+export function simpleThaiTokenize(text: string): string[] {
     // We'll do character-by-character processing
     // Group Thai characters into syllables heuristically
     const result: string[] = []

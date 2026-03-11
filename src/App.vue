@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { RouterView, RouterLink } from 'vue-router'
 import { translateEnglish, translateEnglishToUnicode, cellToUnicode, type BrailleResult } from './lib/braille-en'
-import { translateThai, translateThaiToUnicode } from './lib/braille-th'
+import { translateThai, translateThaiToUnicode, brailleTranslate, simpleThaiTokenize } from './lib/braille-th'
 import { EN_BRAILLE_MAP } from './lib/EN_MAP'
 import { THAI_BRAILLE_MAP } from './lib/TH_MAP'
 
@@ -78,51 +78,58 @@ const brailleMapping = computed<BrailleCharMapping[]>(() => {
       }
     }
   } else {
-    // Thai: use same logic as translateThai but track labels
-    const chars = [...text]
-    for (const ch of chars) {
-      const code = ch.charCodeAt(0)
-      if (ch === ' ') {
-        result.push({ braille: '\u2800', label: '␣' })
-      } else if (map[ch]) {
-        const dotList = map[ch]
-        for (let i = 0; i < dotList.length; i++) {
-          // Build cell from dot string
-          const dots = new Set(dotList[i]!.split(''))
-          let cellCode = 0x2800
-          if (dots.has('1')) cellCode |= 0x01
-          if (dots.has('2')) cellCode |= 0x02
-          if (dots.has('3')) cellCode |= 0x04
-          if (dots.has('4')) cellCode |= 0x08
-          if (dots.has('5')) cellCode |= 0x10
-          if (dots.has('6')) cellCode |= 0x20
-          result.push({
-            braille: String.fromCharCode(cellCode),
-            label: i === 0 ? formatThaiLabel(ch) : ''
-          })
-        }
-      } else if (code >= 0x0E01 && code <= 0x0E7F) {
-        result.push({ braille: '\u2800', label: formatThaiLabel(ch) })
-      } else {
-        // non-Thai: check EN map
-        const enDots = EN_BRAILLE_MAP[ch.toLowerCase()]
-        if (enDots) {
-          for (let i = 0; i < enDots.length; i++) {
-            const dotsSet = new Set(enDots[i]!.split(''))
+    // Thai: use simpleThaiTokenize + brailleTranslate to reorder characters correctly
+    const words = simpleThaiTokenize(text)
+    for (const word of words) {
+      const hasThai = [...word].some(c => c.charCodeAt(0) >= 0x0E01 && c.charCodeAt(0) <= 0x0E7F)
+      // Get the reordered character list (same as translateThai does)
+      const charList = hasThai ? brailleTranslate(word) : [...word]
+      
+      for (const ch of charList) {
+        if (ch === ' ') {
+          result.push({ braille: '\u2800', label: '␣' })
+        } else if (map[ch]) {
+          const dotList = map[ch]
+          for (let i = 0; i < dotList.length; i++) {
+            const dots = new Set(dotList[i]!.split(''))
             let cellCode = 0x2800
-            if (dotsSet.has('1')) cellCode |= 0x01
-            if (dotsSet.has('2')) cellCode |= 0x02
-            if (dotsSet.has('3')) cellCode |= 0x04
-            if (dotsSet.has('4')) cellCode |= 0x08
-            if (dotsSet.has('5')) cellCode |= 0x10
-            if (dotsSet.has('6')) cellCode |= 0x20
+            if (dots.has('1')) cellCode |= 0x01
+            if (dots.has('2')) cellCode |= 0x02
+            if (dots.has('3')) cellCode |= 0x04
+            if (dots.has('4')) cellCode |= 0x08
+            if (dots.has('5')) cellCode |= 0x10
+            if (dots.has('6')) cellCode |= 0x20
             result.push({
               braille: String.fromCharCode(cellCode),
-              label: i === 0 ? ch : ''
+              label: i === 0 ? formatThaiLabel(ch) : ''
             })
           }
         } else {
-          result.push({ braille: '\u2800', label: ch })
+          const code = ch.charCodeAt(0)
+          if (code >= 0x0E01 && code <= 0x0E7F) {
+            result.push({ braille: '\u2800', label: formatThaiLabel(ch) })
+          } else {
+            // non-Thai: check EN map
+            const enDots = EN_BRAILLE_MAP[ch.toLowerCase()]
+            if (enDots) {
+              for (let i = 0; i < enDots.length; i++) {
+                const dotsSet = new Set(enDots[i]!.split(''))
+                let cellCode = 0x2800
+                if (dotsSet.has('1')) cellCode |= 0x01
+                if (dotsSet.has('2')) cellCode |= 0x02
+                if (dotsSet.has('3')) cellCode |= 0x04
+                if (dotsSet.has('4')) cellCode |= 0x08
+                if (dotsSet.has('5')) cellCode |= 0x10
+                if (dotsSet.has('6')) cellCode |= 0x20
+                result.push({
+                  braille: String.fromCharCode(cellCode),
+                  label: i === 0 ? ch : ''
+                })
+              }
+            } else {
+              result.push({ braille: '\u2800', label: ch })
+            }
+          }
         }
       }
     }
