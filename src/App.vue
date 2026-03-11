@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { RouterView, RouterLink } from 'vue-router'
+import { RouterView, RouterLink, useRouter } from 'vue-router'
 import { translateEnglish, translateEnglishToUnicode, cellToUnicode, type BrailleResult } from './lib/braille-en'
 import { translateThai, translateThaiToUnicode, brailleTranslate, simpleThaiTokenize } from './lib/braille-th'
 import { EN_BRAILLE_MAP } from './lib/EN_MAP'
@@ -29,6 +29,28 @@ function toggleTheme() {
 onMounted(() => {
   applyTheme(theme.value)
 })
+
+const router = useRouter()
+
+async function goToReference() {
+  await router.push('/reference')
+  // Wait for #ref-table to appear in DOM (after route transition)
+  await new Promise<void>((resolve) => {
+    const existing = document.getElementById('ref-table')
+    if (existing) { resolve(); return }
+    const observer = new MutationObserver(() => {
+      if (document.getElementById('ref-table')) {
+        observer.disconnect()
+        resolve()
+      }
+    })
+    observer.observe(document.body, { childList: true, subtree: true })
+    // Timeout fallback after 2s
+    setTimeout(() => { observer.disconnect(); resolve() }, 2000)
+  })
+  const el = document.getElementById('ref-table')
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 
 const brailleResult = computed<BrailleResult | null>(() => {
   const text = inputText.value.trim()
@@ -213,7 +235,7 @@ function copyToClipboard(text: string) {
       </RouterLink>
       <div class="nav-links">
         <RouterLink to="/" class="nav-link" id="nav-home">หน้าแรก</RouterLink>
-        <RouterLink to="/reference" class="nav-link" id="nav-reference">ตารางอ้างอิง</RouterLink>
+        <a href="#" class="nav-link" id="nav-reference" @click.prevent="goToReference()">ตารางอ้างอิง</a>
         <button class="theme-toggle" @click="toggleTheme" id="btn-theme-toggle" :title="theme === 'dark' ? 'สลับเป็นโหมดสว่าง' : 'สลับเป็นโหมดมืด'">
           <span class="theme-icon">{{ theme === 'dark' ? '☀️' : '🌙' }}</span>
         </button>

@@ -246,7 +246,7 @@ const currentEntries = computed(() => {
     </div>
 
     <!-- Reference Grid -->
-    <div class="ref-grid">
+    <div id="ref-table" class="ref-grid">
       <div
         v-for="entry in currentEntries"
         :key="entry.char"
