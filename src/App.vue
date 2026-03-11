@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { RouterView, RouterLink } from 'vue-router'
-import { translateEnglish, translateEnglishToUnicode, type BrailleResult } from './lib/braille-en'
+import { translateEnglish, translateEnglishToUnicode, cellToUnicode, type BrailleResult } from './lib/braille-en'
 import { translateThai, translateThaiToUnicode } from './lib/braille-th'
+import { EN_BRAILLE_MAP } from './lib/EN_MAP'
+import { THAI_BRAILLE_MAP } from './lib/TH_MAP'
 
 type Lang = 'en' | 'th'
 
@@ -30,6 +32,103 @@ const brailleUnicode = computed(() => {
   } else {
     return translateThaiToUnicode(text)
   }
+})
+
+interface BrailleCharMapping {
+  braille: string
+  label: string
+}
+
+/** Check if a Thai character is a combining mark that needs a dotted circle */
+function formatThaiLabel(ch: string): string {
+  const code = ch.charCodeAt(0)
+  // Thai combining characters: sara am above/below vowels, tone marks, special marks
+  // U+0E31 (ั), U+0E34-U+0E3A (ิ ี ึ ื ุ ู ฺ), U+0E47-U+0E4E (็ ่ ้ ๊ ๋ ์ ํ ๎)
+  if (
+    code === 0x0E31 ||
+    (code >= 0x0E34 && code <= 0x0E3A) ||
+    (code >= 0x0E47 && code <= 0x0E4E)
+  ) {
+    return '\u25CC' + ch  // ◌ + combining character
+  }
+  return ch
+}
+const brailleMapping = computed<BrailleCharMapping[]>(() => {
+  const text = inputText.value.trim()
+  if (!text) return []
+
+  const map = lang.value === 'en' ? EN_BRAILLE_MAP : THAI_BRAILLE_MAP
+  const result: BrailleCharMapping[] = []
+
+  if (lang.value === 'en') {
+    for (const ch of text) {
+      const dotList = map[ch.toLowerCase()]
+      if (ch === ' ') {
+        result.push({ braille: '\u2800', label: '␣' })
+      } else if (dotList) {
+        for (let i = 0; i < dotList.length; i++) {
+          const { cells } = translateEnglish(ch)
+          result.push({
+            braille: cellToUnicode(cells[i]!),
+            label: i === 0 ? ch : ''
+          })
+        }
+      } else {
+        result.push({ braille: '\u2800', label: ch })
+      }
+    }
+  } else {
+    // Thai: use same logic as translateThai but track labels
+    const chars = [...text]
+    for (const ch of chars) {
+      const code = ch.charCodeAt(0)
+      if (ch === ' ') {
+        result.push({ braille: '\u2800', label: '␣' })
+      } else if (map[ch]) {
+        const dotList = map[ch]
+        for (let i = 0; i < dotList.length; i++) {
+          // Build cell from dot string
+          const dots = new Set(dotList[i]!.split(''))
+          let cellCode = 0x2800
+          if (dots.has('1')) cellCode |= 0x01
+          if (dots.has('2')) cellCode |= 0x02
+          if (dots.has('3')) cellCode |= 0x04
+          if (dots.has('4')) cellCode |= 0x08
+          if (dots.has('5')) cellCode |= 0x10
+          if (dots.has('6')) cellCode |= 0x20
+          result.push({
+            braille: String.fromCharCode(cellCode),
+            label: i === 0 ? formatThaiLabel(ch) : ''
+          })
+        }
+      } else if (code >= 0x0E01 && code <= 0x0E7F) {
+        result.push({ braille: '\u2800', label: formatThaiLabel(ch) })
+      } else {
+        // non-Thai: check EN map
+        const enDots = EN_BRAILLE_MAP[ch.toLowerCase()]
+        if (enDots) {
+          for (let i = 0; i < enDots.length; i++) {
+            const dotsSet = new Set(enDots[i]!.split(''))
+            let cellCode = 0x2800
+            if (dotsSet.has('1')) cellCode |= 0x01
+            if (dotsSet.has('2')) cellCode |= 0x02
+            if (dotsSet.has('3')) cellCode |= 0x04
+            if (dotsSet.has('4')) cellCode |= 0x08
+            if (dotsSet.has('5')) cellCode |= 0x10
+            if (dotsSet.has('6')) cellCode |= 0x20
+            result.push({
+              braille: String.fromCharCode(cellCode),
+              label: i === 0 ? ch : ''
+            })
+          }
+        } else {
+          result.push({ braille: '\u2800', label: ch })
+        }
+      }
+    }
+  }
+
+  return result
 })
 
 const mirrorUnicode = computed(() => {
@@ -160,7 +259,12 @@ function copyToClipboard(text: string) {
               📋 Copy Unicode
             </button>
           </div>
-          <div class="braille-unicode" id="braille-unicode">{{ brailleUnicode }}</div>
+          <div class="braille-char-grid" id="braille-unicode">
+            <div v-for="(item, idx) in brailleMapping" :key="idx" class="braille-char-cell">
+              <span class="braille-char">{{ item.braille }}</span>
+              <span class="braille-char-label">{{ item.label }}</span>
+            </div>
+          </div>
 
           <!-- Mirror -->
           <div v-if="showMirror && mirrorUnicode" class="braille-mirror" style="margin-top: 1.5rem;">
@@ -230,5 +334,37 @@ function copyToClipboard(text: string) {
   justify-content: center;
   align-items: center;
   text-align: center;
+}
+
+.braille-char-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-bottom: 1rem;
+}
+
+.braille-char-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 28px;
+  padding: 4px 2px;
+}
+
+.braille-char {
+  font-size: 1.8rem;
+  line-height: 1.2;
+  color: var(--accent-cyan);
+}
+
+.braille-char-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+  font-family: 'Inter', sans-serif;
+  white-space: nowrap;
+  max-width: 32px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 </style>
