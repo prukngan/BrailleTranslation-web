@@ -34,8 +34,8 @@ const brailleUnicode = computed(() => {
   }
 })
 
-interface BrailleCharMapping {
-  braille: string
+interface BrailleCharGroup {
+  cells: string[]   // one or more braille unicode characters
   label: string
 }
 
@@ -68,28 +68,40 @@ function formatThaiLabel(ch: string): string {
   }
   return ch
 }
-const brailleMapping = computed<BrailleCharMapping[]>(() => {
+
+/** Convert a dot string like "146" to a braille unicode character */
+function dotsToUnicodeChar(dotStr: string): string {
+  const dots = new Set(dotStr.split(''))
+  let cellCode = 0x2800
+  if (dots.has('1')) cellCode |= 0x01
+  if (dots.has('2')) cellCode |= 0x02
+  if (dots.has('3')) cellCode |= 0x04
+  if (dots.has('4')) cellCode |= 0x08
+  if (dots.has('5')) cellCode |= 0x10
+  if (dots.has('6')) cellCode |= 0x20
+  return String.fromCharCode(cellCode)
+}
+
+const brailleMapping = computed<BrailleCharGroup[]>(() => {
   const text = inputText.value.trim()
   if (!text) return []
 
   const map = lang.value === 'en' ? EN_BRAILLE_MAP : THAI_BRAILLE_MAP
-  const result: BrailleCharMapping[] = []
+  const result: BrailleCharGroup[] = []
 
   if (lang.value === 'en') {
     for (const ch of text) {
       const dotList = map[ch.toLowerCase()]
       if (ch === ' ') {
-        result.push({ braille: '\u2800', label: '␣' })
+        result.push({ cells: ['\u2800'], label: '␣' })
       } else if (dotList) {
-        for (let i = 0; i < dotList.length; i++) {
-          const { cells } = translateEnglish(ch)
-          result.push({
-            braille: cellToUnicode(cells[i]!),
-            label: i === 0 ? ch : ''
-          })
-        }
+        const { cells: brCells } = translateEnglish(ch)
+        result.push({
+          cells: brCells.map(c => cellToUnicode(c)),
+          label: ch
+        })
       } else {
-        result.push({ braille: '\u2800', label: ch })
+        result.push({ cells: ['\u2800'], label: ch })
       }
     }
   } else {
@@ -97,52 +109,30 @@ const brailleMapping = computed<BrailleCharMapping[]>(() => {
     const words = simpleThaiTokenize(text)
     for (const word of words) {
       const hasThai = [...word].some(c => c.charCodeAt(0) >= 0x0E01 && c.charCodeAt(0) <= 0x0E7F)
-      // Get the reordered character list (same as translateThai does)
       const charList = hasThai ? brailleTranslate(word) : [...word]
-      
+
       for (const ch of charList) {
         if (ch === ' ') {
-          result.push({ braille: '\u2800', label: '␣' })
+          result.push({ cells: ['\u2800'], label: '␣' })
         } else if (map[ch]) {
           const dotList = map[ch]
-          for (let i = 0; i < dotList.length; i++) {
-            const dots = new Set(dotList[i]!.split(''))
-            let cellCode = 0x2800
-            if (dots.has('1')) cellCode |= 0x01
-            if (dots.has('2')) cellCode |= 0x02
-            if (dots.has('3')) cellCode |= 0x04
-            if (dots.has('4')) cellCode |= 0x08
-            if (dots.has('5')) cellCode |= 0x10
-            if (dots.has('6')) cellCode |= 0x20
-            result.push({
-              braille: String.fromCharCode(cellCode),
-              label: i === 0 ? formatThaiLabel(ch) : ''
-            })
-          }
+          result.push({
+            cells: dotList.map(d => dotsToUnicodeChar(d)),
+            label: formatThaiLabel(ch)
+          })
         } else {
           const code = ch.charCodeAt(0)
           if (code >= 0x0E01 && code <= 0x0E7F) {
-            result.push({ braille: '\u2800', label: formatThaiLabel(ch) })
+            result.push({ cells: ['\u2800'], label: formatThaiLabel(ch) })
           } else {
-            // non-Thai: check EN map
             const enDots = EN_BRAILLE_MAP[ch.toLowerCase()]
             if (enDots) {
-              for (let i = 0; i < enDots.length; i++) {
-                const dotsSet = new Set(enDots[i]!.split(''))
-                let cellCode = 0x2800
-                if (dotsSet.has('1')) cellCode |= 0x01
-                if (dotsSet.has('2')) cellCode |= 0x02
-                if (dotsSet.has('3')) cellCode |= 0x04
-                if (dotsSet.has('4')) cellCode |= 0x08
-                if (dotsSet.has('5')) cellCode |= 0x10
-                if (dotsSet.has('6')) cellCode |= 0x20
-                result.push({
-                  braille: String.fromCharCode(cellCode),
-                  label: i === 0 ? ch : ''
-                })
-              }
+              result.push({
+                cells: enDots.map(d => dotsToUnicodeChar(d)),
+                label: ch
+              })
             } else {
-              result.push({ braille: '\u2800', label: ch })
+              result.push({ cells: ['\u2800'], label: ch })
             }
           }
         }
@@ -282,9 +272,11 @@ function copyToClipboard(text: string) {
             </button>
           </div>
           <div class="braille-char-grid" id="braille-unicode">
-            <div v-for="(item, idx) in brailleMapping" :key="idx" class="braille-char-cell">
-              <span class="braille-char">{{ item.braille }}</span>
-              <span class="braille-char-label">{{ item.label }}</span>
+            <div v-for="(group, idx) in brailleMapping" :key="idx" class="braille-char-group">
+              <div class="braille-char-cells">
+                <span v-for="(cell, ci) in group.cells" :key="ci" class="braille-char">{{ cell }}</span>
+              </div>
+              <span class="braille-char-label">{{ group.label }}</span>
             </div>
           </div>
 
@@ -365,18 +357,24 @@ function copyToClipboard(text: string) {
   margin-bottom: 1rem;
 }
 
-.braille-char-cell {
+.braille-char-group {
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 28px;
   padding: 4px 2px;
+}
+
+.braille-char-cells {
+  display: flex;
+  gap: 0;
 }
 
 .braille-char {
   font-size: 1.8rem;
   line-height: 1.2;
   color: var(--accent-cyan);
+  min-width: 28px;
+  text-align: center;
 }
 
 .braille-char-label {
@@ -385,8 +383,9 @@ function copyToClipboard(text: string) {
   margin-top: 2px;
   font-family: 'Inter', sans-serif;
   white-space: nowrap;
-  max-width: 32px;
+  max-width: 64px;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-align: center;
 }
 </style>
