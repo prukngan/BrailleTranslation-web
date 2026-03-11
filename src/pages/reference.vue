@@ -160,6 +160,10 @@ const thVowels: BrailleEntry[] = [
   { char: 'ไ', label: 'สระไอ', dots: '156', unicode: dotsToUnicode('156') },
   { char: 'ใ', label: 'สระใอ', dots: '156+2', unicode: dotsToUnicode('156') + dotsToUnicode('2') },
   { char: 'เ-า', label: 'สระเอา', dots: '124', unicode: dotsToUnicode('124')},
+  { char: 'ฤ', label: 'สระฤ', dots: '1235+1', unicode: dotsToUnicode('1235') + dotsToUnicode('1') },
+  { char: 'ฤๅ', label: 'สระฤๅ', dots: '1235+1+16', unicode: dotsToUnicode('1235') + dotsToUnicode('1') + dotsToUnicode('16') },
+  { char: 'ฦ', label: 'สระฦ', dots: '123+2', unicode: dotsToUnicode('123') + dotsToUnicode('2') },
+  { char: 'ฦๅ', label: 'สระฦๅ', dots: '123+2+16', unicode: dotsToUnicode('123') + dotsToUnicode('2') + dotsToUnicode('16') },
 ]
 
 const thTones: BrailleEntry[] = [

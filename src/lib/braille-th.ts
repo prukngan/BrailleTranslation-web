@@ -138,70 +138,8 @@ export function brailleTranslate(text: string): string[] {
  * but works for basic Thai text without a backend.
  */
 export function simpleThaiTokenize(text: string): string[] {
-    // We'll do character-by-character processing
-    // Group Thai characters into syllables heuristically
-    const result: string[] = []
-    let current = ''
-
-    for (let i = 0; i < text.length; i++) {
-        const ch = text[i]!
-        const code = ch.charCodeAt(0)
-
-        // Check if Thai character (0E00-0E7F)
-        const isThai = code >= 0x0E01 && code <= 0x0E7F
-        // Check if it's a leading vowel
-        const isLeadingVowel = 'เแโใไ'.includes(ch)
-        // Check if consonant
-        const isConsonant = classify(ch) === 'C'
-        // Check if above/below vowel or tone mark
-        const isAboveBelow = classify(ch) === 'Vmain' || classify(ch) === 'Tone' ||
-            '\u0e47\u0e4c\u0e4d\u0e3a'.includes(ch)
-
-        if (!isThai) {
-            // Non-Thai char: flush current, add as separate token
-            if (current) {
-                result.push(current)
-                current = ''
-            }
-            // Group consecutive non-Thai chars
-            let nonThai = ch
-            while (i + 1 < text.length) {
-                const nextCode = text[i + 1]!.charCodeAt(0)
-                if (nextCode >= 0x0E01 && nextCode <= 0x0E7F) break
-                nonThai += text[++i]!
-            }
-            result.push(nonThai)
-        } else if (isLeadingVowel) {
-            if (current) {
-                result.push(current)
-            }
-            current = ch
-        } else if (isConsonant) {
-            if (current && !('เแโใไ'.includes(current[0] ?? ''))) {
-                // Current doesn't start with leading vowel, and we hit a new consonant
-                // Check if the next char is above/below vowel (then this consonant starts new syllable only if current already has vowel)
-                const hasVowel = [...current].some(c => classify(c) === 'Vmain' || 'ำ'.includes(c))
-                if (hasVowel) {
-                    result.push(current)
-                    current = ch
-                } else {
-                    current += ch
-                }
-            } else {
-                current += ch
-            }
-        } else if (isAboveBelow) {
-            current += ch
-        } else {
-            current += ch
-        }
-    }
-
-    if (current) {
-        result.push(current)
-    }
-
-    return result.filter(s => s.length > 0)
+    const segmenter = new (Intl as any).Segmenter('th', { granularity: 'word' });
+    return Array.from(segmenter.segment(text)).map((s: any) => s.segment);
 }
 
 /** ASCII art star function */
