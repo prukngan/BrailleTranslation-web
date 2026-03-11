@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { RouterView, RouterLink } from 'vue-router'
 import { translateEnglish, translateEnglishToUnicode, cellToUnicode, type BrailleResult } from './lib/braille-en'
 import { translateThai, translateThaiToUnicode, brailleTranslate, simpleThaiTokenize } from './lib/braille-th'
@@ -7,10 +7,28 @@ import { EN_BRAILLE_MAP } from './lib/EN_MAP'
 import { THAI_BRAILLE_MAP } from './lib/TH_MAP'
 
 type Lang = 'en' | 'th'
+type Theme = 'dark' | 'light'
 
 const lang = ref<Lang>('th')
 const inputText = ref('')
 const showMirror = ref(true)
+
+// Theme
+const theme = ref<Theme>((localStorage.getItem('theme') as Theme) || 'dark')
+
+function applyTheme(t: Theme) {
+  document.documentElement.setAttribute('data-theme', t)
+  localStorage.setItem('theme', t)
+}
+
+function toggleTheme() {
+  theme.value = theme.value === 'dark' ? 'light' : 'dark'
+  applyTheme(theme.value)
+}
+
+onMounted(() => {
+  applyTheme(theme.value)
+})
 
 const brailleResult = computed<BrailleResult | null>(() => {
   const text = inputText.value.trim()
@@ -196,6 +214,9 @@ function copyToClipboard(text: string) {
       <div class="nav-links">
         <RouterLink to="/" class="nav-link" id="nav-home">หน้าแรก</RouterLink>
         <RouterLink to="/reference" class="nav-link" id="nav-reference">ตารางอ้างอิง</RouterLink>
+        <button class="theme-toggle" @click="toggleTheme" id="btn-theme-toggle" :title="theme === 'dark' ? 'สลับเป็นโหมดสว่าง' : 'สลับเป็นโหมดมืด'">
+          <span class="theme-icon">{{ theme === 'dark' ? '☀️' : '🌙' }}</span>
+        </button>
       </div>
     </div>
   </nav>
