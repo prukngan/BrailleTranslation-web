@@ -3,19 +3,13 @@ import { RouterLink } from 'vue-router'
 </script>
 
 <template>
-  <main class="page-container">
-    <div class="hero">
-      <span class="hero-badge">✨ Thai & English Braille</span>
-      <h1>แปลงข้อความเป็น<br/>อักษรเบรลล์</h1>
-      <p>เครื่องมือแปลงภาษาไทยและภาษาอังกฤษเป็นอักษรเบรลล์ รองรับทั้ง Unicode Braille และ ASCII Art</p>
-    </div>
-
+  <main class="page-container" style="padding-top: 2rem;">
     <div class="feature-grid">
-      <RouterLink to="/translate" class="feature-card" id="feature-translate">
+      <div class="feature-card" id="feature-translate">
         <span class="feature-emoji">🔤</span>
-        <h3 class="feature-name">แปลงอักษร</h3>
-        <p class="feature-desc">พิมพ์ข้อความภาษาไทยหรืออังกฤษ แล้วแปลงเป็นอักษรเบรลล์ทันที พร้อมแสดงผลทั้ง Unicode และ ASCII Art</p>
-      </RouterLink>
+        <h3 class="feature-name">ระบบแปลภาษาสำเร็จรูป</h3>
+        <p class="feature-desc">ตอนนี้ระบบแปลภาษาถูกย้ายไปไว้ที่หน้าหลักส่วนบน เพื่อให้สามารถใช้งานพร้อมกับตารางอ้างอิงได้แล้ว</p>
+      </div>
 
       <RouterLink to="/reference" class="feature-card" id="feature-reference">
         <span class="feature-emoji">📖</span>
@@ -28,12 +22,6 @@ import { RouterLink } from 'vue-router'
         <h3 class="feature-name">Mirror Mode</h3>
         <p class="feature-desc">แสดงผลกระจกเงาของอักษรเบรลล์ เพื่อใช้ในการเขียนเบรลล์ด้วยสไตลัส (Reverse Braille)</p>
       </div>
-    </div>
-
-    <div style="text-align: center; margin-top: 3rem;">
-      <RouterLink to="/translate" class="btn btn-primary" id="btn-start">
-        ▸ เริ่มแปลงอักษร
-      </RouterLink>
     </div>
   </main>
 </template>

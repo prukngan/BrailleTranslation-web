@@ -37,13 +37,6 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/translate': RouteRecordInfo<
-      '/translate',
-      '/translate',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
   }
 
   /**
@@ -66,12 +59,6 @@ declare module 'vue-router/auto-routes' {
     'src/pages/reference.vue': {
       routes:
         | '/reference'
-      views:
-        | never
-    }
-    'src/pages/translate.vue': {
-      routes:
-        | '/translate'
       views:
         | never
     }
